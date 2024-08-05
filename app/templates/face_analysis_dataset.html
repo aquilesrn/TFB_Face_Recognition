@@ -1,0 +1,211 @@
+{% extends "base.html" %}
+
+{% block title %}Face Analysis Dataset{% endblock %}
+
+{% block header %}Face Analysis Dataset{% endblock %}
+
+{% block content %}
+    <div class="container mt-5">
+        <h3>Face Analysis Dataset</h3>
+        <form id="face-analysis-dataset-form" enctype="multipart/form-data" method="post">
+            <div class="mb-3">
+                <label for="main-model" class="form-label">Main Models</label>
+                <select class="form-select" id="main-model" name="main_model" onchange="toggleSettings()">
+                    <option value="DeepFace">DeepFace</option>
+                    <option value="Amazon Rekognition">Amazon Rekognition</option>
+                </select>
+            </div>
+
+            <div id="settings-frame" class="mb-3">
+                <label for="backend" class="form-label">Backends</label>
+                <select class="form-select" id="backend" name="backend">
+                    <option value="retinaface">retinaface</option>
+                    <option value="mtcnn">mtcnn</option>
+                    <option value="fastmtcnn">fastmtcnn</option>
+                    <option value="dlib">dlib</option>
+                    <option value="yolov8">yolov8</option>
+                    <option value="yunet">yunet</option>
+                    <option value="centerface">centerface</option>
+                    <option value="mediapipe">mediapipe</option>
+                    <option value="ssd">ssd</option>
+                    <option value="opencv">opencv</option>
+                    <option value="skip">skip</option>
+                </select>
+                <label for="model" class="form-label">Models</label>
+                <select class="form-select" id="model" name="model">
+                    <option value="Facenet512">Facenet512</option>
+                    <option value="Facenet">Facenet</option>
+                    <option value="VGG-Face">VGG-Face</option>
+                    <option value="ArcFace">ArcFace</option>
+                    <option value="Dlib">Dlib</option>
+                    <option value="GhostFaceNet">GhostFaceNet</option>
+                    <option value="SFace">SFace</option>
+                    <option value="OpenFace">OpenFace</option>
+                    <option value="DeepFace">DeepFace</option>
+                    <option value="DeepID">DeepID</option>
+                </select>
+                <label for="metric" class="form-label">Metrics</label>
+                <select class="form-select" id="metric" name="metric">
+                    <option value="euclidean">euclidean</option>
+                    <option value="euclidean_l2">euclidean_l2</option>
+                    <option value="cosine">cosine</option>
+                </select>
+            </div>
+
+            <div class="mb-3">
+                <label for="folder" class="form-label">Upload ZIP Folder</label>
+                <input class="form-control" type="file" id="folder" name="folder" accept=".zip">
+            </div>
+
+            <button type="button" class="btn btn-primary" onclick="analyzeDataset()">Analyze Dataset</button>
+
+            <div class="mt-5">
+                <div class="row">
+                    <div class="col-md-12">
+                        <h4>Analysis Progress</h4>
+                        <div class="progress">
+                            <div id="progress-bar" class="progress-bar" role="progressbar" style="width: 0%;">0%</div>
+                        </div>
+                        <p id="progress-text">Analyzed 0 of 0 images</p>
+                        <h4>Analysis Results</h4>
+                        <table id="results-table" class="table">
+                            <thead>
+                                <tr>
+                                    <th>Image</th>
+                                    <th>Age</th>
+                                    <th>Dominant Emotion</th>
+                                    <th>Dominant Gender</th>
+                                    <th>Dominant Race</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                            </tbody>
+                        </table>
+                        <canvas id="results-chart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <script>
+        function toggleSettings() {
+            const mainModel = document.getElementById('main-model').value;
+            const settingsFrame = document.getElementById('settings-frame');
+            if (mainModel === 'Amazon Rekognition') {
+                settingsFrame.style.display = 'none';
+            } else {
+                settingsFrame.style.display = 'block';
+            }
+        }
+
+        async function analyzeDataset() {
+            const form = document.getElementById('face-analysis-dataset-form');
+            const formData = new FormData(form);
+            const folder = document.getElementById('folder').files[0];
+            const progressBar = document.getElementById('progress-bar');
+            const progressText = document.getElementById('progress-text');
+            const tableBody = document.getElementById('results-table').getElementsByTagName('tbody')[0];
+
+            tableBody.innerHTML = '';
+            progressBar.style.width = '0%';
+            progressBar.innerText = '0%';
+            progressText.innerText = `Analyzed 0 of 0 images`;
+
+            let ageData = [];
+            let emotionData = {};
+            let genderData = {};
+            let raceData = {};
+
+            if (folder) {
+                formData.append('folder', folder);
+
+                const response = await fetch('/face_analysis_dataset/', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder();
+                let analyzed = 0;
+                let total = 0;
+                let jsonBuffer = '';
+
+                while (true) {
+                    const { value, done } = await reader.read();
+                    if (done) break;
+                    jsonBuffer += decoder.decode(value);
+                    const parts = jsonBuffer.split('\n');
+                    for (let i = 0; i < parts.length - 1; i++) {
+                        const json = JSON.parse(parts[i]);
+                        if (total === 0) {
+                            total = json.total;
+                            progressText.innerText = `Analyzed ${analyzed} of ${total} images`;
+                        }
+                        if (json.analyzed > analyzed) {
+                            analyzed = json.analyzed;
+                            progressBar.style.width = `${(analyzed / total) * 100}%`;
+                            progressBar.innerText = `${(analyzed / total) * 100}%`;
+                            progressText.innerText = `Analyzed ${analyzed} of ${total} images`;
+
+                            const analysis = json.analysis;
+                            if (analysis.results && analysis.results.length > 0) {
+                                const face = analysis.results[0];
+                                const row = tableBody.insertRow();
+                                row.insertCell(0).innerText = `Image ${analyzed}`;
+                                row.insertCell(1).innerText = face.age;
+                                row.insertCell(2).innerText = face.dominant_emotion;
+                                row.insertCell(3).innerText = face.dominant_gender;
+                                row.insertCell(4).innerText = face.dominant_race;
+
+                                ageData.push(face.age);
+                                emotionData[face.dominant_emotion] = (emotionData[face.dominant_emotion] || 0) + 1;
+                                genderData[face.dominant_gender] = (genderData[face.dominant_gender] || 0) + 1;
+                                raceData[face.dominant_race] = (raceData[face.dominant_race] || 0) + 1;
+                            }
+                        }
+                    }
+                    jsonBuffer = parts[parts.length - 1];
+                }
+
+                const ctx = document.getElementById('results-chart').getContext('2d');
+                new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: Object.keys(emotionData),
+                        datasets: [
+                            {
+                                label: 'Emotion',
+                                data: Object.values(emotionData),
+                                backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                                borderColor: 'rgba(75, 192, 192, 1)',
+                                borderWidth: 1
+                            },
+                            {
+                                label: 'Gender',
+                                data: Object.values(genderData),
+                                backgroundColor: 'rgba(153, 102, 255, 0.2)',
+                                borderColor: 'rgba(153, 102, 255, 1)',
+                                borderWidth: 1
+                            },
+                            {
+                                label: 'Race',
+                                data: Object.values(raceData),
+                                backgroundColor: 'rgba(255, 159, 64, 0.2)',
+                                borderColor: 'rgba(255, 159, 64, 1)',
+                                borderWidth: 1
+                            }
+                        ]
+                    },
+                    options: {
+                        scales: {
+                            y: {
+                                beginAtZero: true
+                            }
+                        }
+                    }
+                });
+            }
+        }
+    </script>
+{% endblock %}

@@ -1,0 +1,11 @@
+body {
+    padding-top: 56px;
+}
+
+h1, h2 {
+    margin-bottom: 20px;
+}
+
+.navbar-nav .nav-link {
+    margin-right: 10px;
+}

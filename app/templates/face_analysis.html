@@ -1,0 +1,138 @@
+{% extends "base.html" %}
+
+{% block title %}Face Analysis{% endblock %}
+
+{% block header %}Face Analysis{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <h3>Face Analysis</h3>
+    <form id="face-analysis-form" enctype="multipart/form-data" method="post">
+        <div class="mb-3">
+            <label for="main-model" class="form-label">Main Models</label>
+            <select class="form-select" id="main-model" name="main_model" onchange="toggleSettings()">
+                <option value="DeepFace">DeepFace</option>
+                <option value="Amazon Rekognition">Amazon Rekognition</option>
+            </select>
+        </div>
+
+        <div id="settings-frame" class="mb-3">
+            <label for="backend" class="form-label">Backends</label>
+            <select class="form-select" id="backend" name="backend">
+                <option value="retinaface">retinaface</option>
+                <option value="mtcnn">mtcnn</option>
+                <option value="fastmtcnn">fastmtcnn</option>
+                <option value="dlib">dlib</option>
+                <option value="yolov8">yolov8</option>
+                <option value="yunet">yunet</option>
+                <option value="centerface">centerface</option>
+                <option value="mediapipe">mediapipe</option>
+                <option value="ssd">ssd</option>
+                <option value="opencv">opencv</option>
+                <option value="skip">skip</option>
+            </select>
+            <label for="model" class="form-label">Models</label>
+            <select class="form-select" id="model" name="model">
+                <option value="Facenet512">Facenet512</option>
+                <option value="Facenet">Facenet</option>
+                <option value="VGG-Face">VGG-Face</option>
+                <option value="ArcFace">ArcFace</option>
+                <option value="Dlib">Dlib</option>
+                <option value="GhostFaceNet">GhostFaceNet</option>
+                <option value="SFace">SFace</option>
+                <option value="OpenFace">OpenFace</option>
+                <option value="DeepFace">DeepFace</option>
+                <option value="DeepID">DeepID</option>
+            </select>
+            <label for="metric" class="form-label">Metrics</label>
+            <select class="form-select" id="metric" name="metric">
+                <option value="euclidean">euclidean</option>
+                <option value="euclidean_l2">euclidean_l2</option>
+                <option value="cosine">cosine</option>
+            </select>
+        </div>
+
+        <div class="mb-3">
+            <label for="file" class="form-label">Upload Image</label>
+            <input class="form-control" type="file" id="file" name="file" accept="image/*" onchange="loadImage()">
+        </div>
+
+        <button type="button" class="btn btn-primary" onclick="analyzeImage()">Analyze Image</button>
+
+        <div class="mt-5">
+            <div class="row">
+                <div class="col-md-6">
+                    <h4>Uploaded Image</h4>
+                    <img id="uploaded-image" src="#" alt="Uploaded Image" class="img-fluid" style="display:none;">
+                </div>
+                <div class="col-md-6">
+                    <h4>Analysis Results</h4>
+                    <pre id="results-content"></pre>
+                </div>
+            </div>
+        </div>
+    </form>
+</div>
+
+<script>
+    function toggleSettings() {
+        const mainModel = document.getElementById('main-model').value;
+        const settingsFrame = document.getElementById('settings-frame');
+        if (mainModel === 'Amazon Rekognition') {
+            settingsFrame.style.display = 'none';
+        } else {
+            settingsFrame.style.display = 'block';
+        }
+    }
+
+    function loadImage() {
+        const file = document.getElementById('file').files[0];
+        const reader = new FileReader();
+        reader.onload = function (e) {
+            document.getElementById('uploaded-image').src = e.target.result;
+            document.getElementById('uploaded-image').style.display = 'block';
+        };
+        if (file) {
+            reader.readAsDataURL(file);
+        }
+    }
+
+    async function analyzeImage() {
+        const form = document.getElementById('face-analysis-form');
+        const formData = new FormData(form);
+
+        const response = await fetch('/face_analysis/', {
+            method: 'POST',
+            body: formData
+        });
+
+        const result = await response.json();
+        document.getElementById('results-content').innerText = JSON.stringify(result, null, 2);
+
+        // Show bounding box on the uploaded image
+        const imgElement = document.getElementById('uploaded-image');
+        if (result.analysis && result.analysis.length > 0) {
+            const img = new Image();
+            img.src = imgElement.src;
+            img.onload = function () {
+                const canvas = document.createElement('canvas');
+                canvas.width = img.width;
+                canvas.height = img.height;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0);
+                result.analysis.forEach(face => {
+                    const region = face.bounding_box;
+                    const x = region.Left * img.width;
+                    const y = region.Top * img.height;
+                    const width = region.Width * img.width;
+                    const height = region.Height * img.height;
+                    ctx.strokeStyle = 'green';
+                    ctx.lineWidth = 2;
+                    ctx.strokeRect(x, y, width, height);
+                });
+                imgElement.src = canvas.toDataURL();
+            };
+        }
+    }
+</script>
+{% endblock %}

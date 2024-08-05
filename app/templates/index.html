@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard{% endblock %}
+
+{% block header %}Model Comparison Dashboard API{% endblock %}
+
+{% block content %}
+    <h2>{{ message }}</h2>
+    <p>Welcome to the Model Comparison Dashboard. Use the navigation links to explore the different functionalities.</p>
+
+    <div class="container mt-5">
+        <h3>Face Recognition</h3>
+        <form id="face-recognition-form" enctype="multipart/form-data" method="post">
+            <div class="mb-3">
+                <label for="file" class="form-label">Upload Image</label>
+                <input class="form-control" type="file" id="file" name="file" accept="image/*">
+            </div>
+            <div class="mb-3">
+                <label for="model" class="form-label">Select Model</label>
+                <select class="form-select" id="model" name="model">
+                    <option value="DeepFace">DeepFace</option>
+                    <option value="Amazon Rekognition">Amazon Rekognition</option>
+                </select>
+            </div>
+            <button type="button" class="btn btn-primary" onclick="identifyFaces()">Identify Faces</button>
+            <button type="button" class="btn btn-secondary" onclick="analyzeFace()">Analyze Face</button>
+        </form>
+
+        <div id="results" class="mt-5">
+            <h4>Results</h4>
+            <pre id="results-content"></pre>
+        </div>
+    </div>
+
+    <script>
+        async function identifyFaces() {
+            const form = document.getElementById('face-recognition-form');
+            const formData = new FormData(form);
+            const response = await fetch('/identify_faces/', {
+                method: 'POST',
+                body: formData
+            });
+            const result = await response.json();
+            document.getElementById('results-content').innerText = JSON.stringify(result, null, 2);
+        }
+
+        async function analyzeFace() {
+            const form = document.getElementById('face-recognition-form');
+            const formData = new FormData(form);
+            const response = await fetch('/analyze_face/', {
+                method: 'POST',
+                body: formData
+            });
+            const result = await response.json();
+            document.getElementById('results-content').innerText = JSON.stringify(result, null, 2);
+        }
+    </script>
+{% endblock %}
