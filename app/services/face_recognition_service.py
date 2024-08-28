@@ -99,8 +99,8 @@ class FaceRecognitionService:
     def analyze_face_rekognition(file, bucket, region='eu-west-1', db: Session = None):
         # session = boto3.Session()
         session = boto3.Session(
-            aws_access_key_id='AKIA6GBMC526KIQSOM6N',
-            aws_secret_access_key='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',
+            aws_access_key_id='##########',
+            aws_secret_access_key='#########/##############',
             region_name=region
         )
         client = session.client('rekognition', region_name=region)
