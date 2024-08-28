@@ -1,9 +1,9 @@
-CREATE TABLE users (
+/* CREATE TABLE users (
     user_id SERIAL PRIMARY KEY,
     username VARCHAR(255) UNIQUE NOT NULL,
     email VARCHAR(255) UNIQUE NOT NULL,
     password VARCHAR(255) NOT NULL
-);
+); */
 
 CREATE TABLE models (
     model_id SERIAL PRIMARY KEY,
@@ -13,10 +13,8 @@ CREATE TABLE models (
 
 CREATE TABLE images (
     image_id SERIAL PRIMARY KEY,
-    user_id INTEGER NOT NULL,
     upload_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    file_path VARCHAR(255) NOT NULL,
-    FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
+    file_path VARCHAR(255) NOT NULL
 );
 
 CREATE TABLE analyses (
@@ -37,7 +35,6 @@ CREATE TABLE metrics (
     FOREIGN KEY (analysis_id) REFERENCES analyses(analysis_id) ON DELETE CASCADE
 );
 
-CREATE INDEX idx_images_user_id ON images(user_id);
 CREATE INDEX idx_analyses_image_id ON analyses(image_id);
 CREATE INDEX idx_analyses_model_id ON analyses(model_id);
 CREATE INDEX idx_metrics_analysis_id ON metrics(analysis_id);

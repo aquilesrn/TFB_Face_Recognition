@@ -1,0 +1,150 @@
+{% extends "base.html" %}
+
+{% block title %}Face Recognition Tests{% endblock %}
+
+{% block header %}Face Recognition Tests{% endblock %}
+
+{% block content %}
+    <div class="container mt-5">
+        <h3>Face Recognition Tests</h3>
+        <form id="face-recognition-tests-form" enctype="multipart/form-data" method="post">
+            <div class="mb-3">
+                <label for="folder-path" class="form-label">Select Folder (ZIP file)</label>
+                <input class="form-control" type="file" id="folder-path" name="folder">
+            </div>
+
+            <button type="button" class="btn btn-primary" onclick="runTruePositiveTest()">True Positive Test</button>
+
+            <div class="mt-5">
+                <div class="row">
+                    <div class="col-md-12">
+                        <h4>Summary Results</h4>
+                        <table id="summary-table" class="table">
+                            <thead>
+                                <tr>
+                                    <th>Model</th>
+                                    <th>Emotion Evaluated</th>
+                                    <th>Nº Images</th>
+                                    <th>angry</th>
+                                    <th>fearful</th>
+                                    <th>neutral</th>
+                                    <th>sad</th>
+                                    <th>disgusted</th>
+                                    <th>happy</th>
+                                    <th>surprised</th>
+                                    <th>unknown</th>
+                                    <th>%Success</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="row mt-5">
+                    <div class="col-md-12">
+                        <h4>Test Progress</h4>
+                        <div class="progress">
+                            <div id="progress-bar" class="progress-bar" role="progressbar" style="width: 0%;">0%</div>
+                        </div>
+                        <p id="progress-text">Processed 0 of 0 images</p>
+                        <h4>Test Results</h4>
+                        <table id="results-table" class="table">
+                            <thead>
+                                <tr>
+                                    <th>Model</th>
+                                    <th>True Positives (TP)</th>
+                                    <th>True Negatives (TN)</th>
+                                    <th>False Positives (FP)</th>
+                                    <th>False Negatives (FN)</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <script>
+        function runTruePositiveTest() {
+            const form = document.getElementById('face-recognition-tests-form');
+            const formData = new FormData(form);
+            const progressBar = document.getElementById('progress-bar');
+            const progressText = document.getElementById('progress-text');
+            const summaryTableBody = document.getElementById('summary-table').getElementsByTagName('tbody')[0];
+            const resultsTableBody = document.getElementById('results-table').getElementsByTagName('tbody')[0];
+
+            summaryTableBody.innerHTML = '';
+            resultsTableBody.innerHTML = '';
+            progressBar.style.width = '0%';
+            progressBar.innerText = '0%';
+            progressText.innerText = `Processed 0 of 0 images`;
+
+            fetch('/face_recognition_tests/', {
+                method: 'POST',
+                body: formData
+            }).then(response => {
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder();
+                let processed = 0;
+                let total = 0;
+                let jsonBuffer = '';
+
+                reader.read().then(function processText({ done, value }) {
+                    if (done) return;
+
+                    jsonBuffer += decoder.decode(value);
+                    const parts = jsonBuffer.split('\n');
+                    for (let i = 0; i < parts.length - 1; i++) {
+                        const json = JSON.parse(parts[i]);
+                        if (total === 0) {
+                            total = json.total;
+                            progressText.innerText = `Processed ${processed} of ${total} images`;
+                        }
+                        if (json.processed > processed) {
+                            processed = json.processed;
+                            progressBar.style.width = `${(processed / total) * 100}%`;
+                            progressBar.innerText = `${(processed / total) * 100}%`;
+                            progressText.innerText = `Processed ${processed} of ${total} images`;
+
+                            // Update Summary Table
+                            const summary = json.summary;
+                            summaryTableBody.innerHTML = '';
+                            const row = summaryTableBody.insertRow();
+                            row.insertCell(0).innerText = json.results[0].model;  // Model
+                            row.insertCell(1).innerText = json.emotion_evaluated;  // Emotion Evaluated
+                            row.insertCell(2).innerText = json.num_images;  // Nº Images
+                            row.insertCell(3).innerText = summary.angry || 0;
+                            row.insertCell(4).innerText = summary.fearful || 0;
+                            row.insertCell(5).innerText = summary.neutral || 0;
+                            row.insertCell(6).innerText = summary.sad || 0;
+                            row.insertCell(7).innerText = summary.disgusted || 0;
+                            row.insertCell(8).innerText = summary.happy || 0;
+                            row.insertCell(9).innerText = summary.surprised || 0;
+                            row.insertCell(10).innerText = summary.unknown || 0;
+                            row.insertCell(11).innerText = `${((summary[json.emotion_evaluated] / json.num_images) * 100).toFixed(2)}%`;
+
+                            // Update Results Table
+                            const result = json.results;
+                            resultsTableBody.innerHTML = '';
+                            for (const [model, modelResults] of Object.entries(result)) {
+                                const row = resultsTableBody.insertRow();
+                                row.insertCell(0).innerText = model;
+                                row.insertCell(1).innerText = modelResults.TP;
+                                row.insertCell(2).innerText = modelResults.TN;
+                                row.insertCell(3).innerText = modelResults.FP;
+                                row.insertCell(4).innerText = modelResults.FN;
+                            }
+                        }
+                    }
+                    jsonBuffer = parts[parts.length - 1];
+                    reader.read().then(processText);
+                });
+            });
+        }
+    </script>
+{% endblock %}

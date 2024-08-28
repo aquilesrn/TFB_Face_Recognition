@@ -52,11 +52,27 @@ services:
       dockerfile: Dockerfile
     ports:
       - "5005:5000"
+    volumes:
+      - deepface_weights:/app/deepface/.deepface/weights      
     networks:
       - app-network
+
+  tests:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: ["pytest", "--maxfail=1", "--disable-warnings", "-v"]
+    volumes:
+      - .:/app  
+    depends_on:
+      -db
+      -web
+    networks:
+      - app-network      
 
 networks:
   app-network:
 
 volumes:
   postgres_data:
+  deepface_weights:

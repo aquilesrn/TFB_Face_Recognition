@@ -11,6 +11,7 @@ from app.routes.face_recognition import face_recognition_router
 from app.routes.real_time_face import real_time_face_router
 from app.routes.dataset import dataset_router
 from app.routes.reports import report_router
+from app.routes.face_recognition_tests import face_recognition_tests_router
 from fastapi.staticfiles import StaticFiles
 
 class AppConfig:
@@ -45,6 +46,7 @@ app.include_router(face_recognition_router.router)
 app.include_router(dataset_router.router)
 app.include_router(report_router.router)
 app.include_router(real_time_face_router.router)
+app.include_router(face_recognition_tests_router.router)
 
 @app.get("/", response_class=HTMLResponse)
 async def read_root(request: Request):
@@ -53,6 +55,10 @@ async def read_root(request: Request):
 @app.get("/face_analysis", response_class=HTMLResponse)
 async def get_face_analysis(request: Request):
     return app_config.templates.TemplateResponse("face_analysis.html", {"request": request})
+
+@app.get("/face_analysis_grouped", response_class=HTMLResponse)
+async def get_face_analysis_grouped(request: Request):
+    return app_config.templates.TemplateResponse("face_analysis_grouped.html", {"request": request})
 
 @app.get("/face_analysis_dataset", response_class=HTMLResponse)
 async def get_face_analysis_dataset(request: Request):
@@ -65,6 +71,14 @@ async def get_realtime_face_recognition(request: Request):
 @app.get("/dashboard", response_class=HTMLResponse)
 async def get_dashboard(request: Request):
     return app_config.templates.TemplateResponse("dashboard.html", {"request": request})
+
+@app.get("/face_recognition_tests", response_class=HTMLResponse)
+async def get_face_recognition_tests(request: Request):
+    return app_config.templates.TemplateResponse("face_recognition_tests.html", {"request": request})
+
+@app.get("/generate_report", response_class=HTMLResponse)
+async def get_face_recognition_tests(request: Request):
+    return app_config.templates.TemplateResponse("detailed_report.html", {"request": request})
 
 if __name__ == "__main__":
     import uvicorn

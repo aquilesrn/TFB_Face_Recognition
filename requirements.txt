@@ -12,10 +12,11 @@ DeepFace==0.0.92
 python-multipart==0.0.9
 pypdf==4.2.0
 redis==5.0.4
-psycopg2-binary==2.9.3
+psycopg2-binary
 passlib==1.7.4
 numpy
 pandas
 opencv-python
 matplotlib
 tf-keras
+pytest

@@ -1,0 +1,353 @@
+{% extends "base.html" %}
+
+{% block title %}Face Analysis Grouped{% endblock %}
+
+{% block header %}Face Analysis Grouped{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <h3>Face Analysis Grouped</h3>
+    <form id="face-analysis-grouped-form" enctype="multipart/form-data" method="post">
+        <div class="mb-3">
+            <label for="main-model" class="form-label">Main Models</label>
+            <select class="form-select" id="main-model" name="main_model" onchange="toggleSettings()">
+                <option value="DeepFace">DeepFace</option>
+                <option value="Amazon Rekognition">Amazon Rekognition</option>
+            </select>
+        </div>
+
+        <div id="settings-frame" class="mb-3">
+            <label for="backend" class="form-label">Backends</label>
+            <select class="form-select" id="backend" name="backend">
+                <option value="retinaface">retinaface</option>
+                <option value="mtcnn">mtcnn</option>
+                <option value="fastmtcnn">fastmtcnn</option>
+                <option value="dlib">dlib</option>
+                <option value="yolov8">yolov8</option>
+                <option value="yunet">yunet</option>
+                <option value="centerface">centerface</option>
+                <option value="mediapipe">mediapipe</option>
+                <option value="ssd">ssd</option>
+                <option value="opencv">opencv</option>
+                <option value="skip">skip</option>
+            </select>
+            <label for="model" class="form-label">Models</label>
+            <select class="form-select" id="model" name="model">
+                <option value="Facenet512">Facenet512</option>
+                <option value="Facenet">Facenet</option>
+                <option value="VGG-Face">VGG-Face</option>
+                <option value="ArcFace">ArcFace</option>
+                <option value="Dlib">Dlib</option>
+                <option value="GhostFaceNet">GhostFaceNet</option>
+                <option value="SFace">SFace</option>
+                <option value="OpenFace">OpenFace</option>
+                <option value="DeepFace">DeepFace</option>
+                <option value="DeepID">DeepID</option>
+            </select>
+            <label for="metric" class="form-label">Metrics</label>
+            <select class="form-select" id="metric" name="metric">
+                <option value="euclidean">euclidean</option>
+                <option value="euclidean_l2">euclidean_l2</option>
+                <option value="cosine">cosine</option>
+            </select>
+        </div>
+
+        <div class="mb-3">
+            <label for="file" class="form-label">Upload Image</label>
+            <input class="form-control" type="file" id="file" name="file" accept="image/*" onchange="loadImage()">
+        </div>
+
+        <button type="button" class="btn btn-primary" onclick="analyzeImage()">Analyze Image</button>
+        <button type="button" class="btn btn-secondary" onclick="clearFields()">Clear</button>
+
+        <div class="mt-5">
+            <div class="row">
+                <div class="col-md-12">
+                    <h4>Uploaded Image</h4>
+                    <img id="uploaded-image" src="#" alt="Uploaded Image" class="img-fluid" style="display:none;">
+                </div>
+            </div>
+            <div id="summary-table" class="row mt-3" style="display:none;">
+                <h4>Summary</h4>
+                <table class="table table-bordered">
+                    <thead>
+                        <tr>
+                            <th>Num Faces</th>
+                            <th>Num Male</th>
+                            <th>Num Female</th>
+                            <th>Average Age</th>
+                            <th>Male Dominant Emotion</th>
+                            <th>Female Dominant Emotion</th>
+                            <th>General Dominant Emotion</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr id="summary-row"></tr>
+                    </tbody>
+                </table>
+            </div>
+            <div id="analysis-table" class="row mt-3" style="display:none;">
+                <h4>Analysis Results</h4>
+                <table id="analysis-results" class="table table-bordered">
+                    <thead>
+                        <tr id="analysis-header"></tr>
+                    </thead>
+                    <tbody id="analysis-body"></tbody>
+                </table>
+            </div>
+        </div>
+    </form>
+</div>
+
+<script>
+    function toggleSettings() {
+        const mainModel = document.getElementById('main-model').value;
+        const settingsFrame = document.getElementById('settings-frame');
+        if (mainModel === 'Amazon Rekognition') {
+            settingsFrame.style.display = 'none';
+        } else {
+            settingsFrame.style.display = 'block';
+        }
+    }
+
+    function loadImage() {
+        const file = document.getElementById('file').files[0];
+        const reader = new FileReader();
+        reader.onload = function (e) {
+            document.getElementById('uploaded-image').src = e.target.result;
+            document.getElementById('uploaded-image').style.display = 'block';
+        };
+        if (file) {
+            reader.readAsDataURL(file);
+        }
+    }
+
+    async function analyzeImage() {
+        const form = document.getElementById('face-analysis-grouped-form');
+        const formData = new FormData(form);
+
+        const response = await fetch('/face_analysis_grouped/', {
+            method: 'POST',
+            body: formData
+        });
+
+        const result = await response.json();
+        populateTables(result);
+
+        // Show bounding box on the uploaded image
+        const imgElement = document.getElementById('uploaded-image');
+        if (result.analysis && result.analysis.length > 0) {
+            const img = new Image();
+            img.src = imgElement.src;
+            img.onload = function () {
+                const canvas = document.createElement('canvas');
+                canvas.width = img.width;
+                canvas.height = img.height;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0);
+                result.analysis.forEach(face => {
+                    const region = face.bounding_box;
+                    if (region.Left !== undefined) {
+                        const x = region.Left * img.width;
+                        const y = region.Top * img.height;
+                        const width = region.Width * img.width;
+                        const height = region.Height * img.height;
+                        ctx.strokeStyle = 'green';
+                        ctx.lineWidth = 2;
+                        ctx.strokeRect(x, y, width, height);
+                    } else {
+                        const x = region.x * img.width;
+                        const y = region.y * img.height;
+                        const width = region.w * img.width;
+                        const height = region.h * img.height;
+                        ctx.strokeStyle = 'green';
+                        ctx.lineWidth = 2;
+                        ctx.strokeRect(x, y, width, height);
+                    }
+                });
+                imgElement.src = canvas.toDataURL();
+            };
+        }
+    }
+
+    function populateTables(result) {
+        const mainModel = document.getElementById('main-model').value;
+
+        // Reset tables
+        document.getElementById('summary-table').style.display = 'none';
+        document.getElementById('analysis-table').style.display = 'none';
+        document.getElementById('summary-row').innerHTML = '';
+        document.getElementById('analysis-header').innerHTML = '';
+        document.getElementById('analysis-body').innerHTML = '';
+
+        if (mainModel === "DeepFace") {
+            populateDeepFaceTables(result);
+        } else if (mainModel === "Amazon Rekognition") {
+            populateRekognitionTables(result);
+        }
+    }
+
+    function populateDeepFaceTables(result) {
+        if (result.analysis && result.analysis.results && result.analysis.results.length > 0) {
+            const summary = calculateDeepFaceSummary(result.analysis.results);
+            displaySummary(summary);
+            displayDeepFaceAnalysis(result.analysis.results);
+        }
+    }
+
+    function populateRekognitionTables(result) {
+        if (result.analysis && result.analysis.length > 0) {
+            const summary = calculateRekognitionSummary(result.analysis);
+            displaySummary(summary);
+            displayRekognitionAnalysis(result.analysis);
+        }
+    }
+
+    function calculateDeepFaceSummary(analysis) {
+        let numFaces = analysis.length;
+        let numMale = 0;
+        let numFemale = 0;
+        let totalAge = 0;
+        let maleEmotionCount = {};
+        let femaleEmotionCount = {};
+        let generalEmotionCount = {};
+
+        analysis.forEach(face => {
+            totalAge += face.age;
+            if (face.dominant_gender === "Man") {
+                numMale++;
+                maleEmotionCount[face.dominant_emotion] = (maleEmotionCount[face.dominant_emotion] || 0) + 1;
+            } else {
+                numFemale++;
+                femaleEmotionCount[face.dominant_emotion] = (femaleEmotionCount[face.dominant_emotion] || 0) + 1;
+            }
+            generalEmotionCount[face.dominant_emotion] = (generalEmotionCount[face.dominant_emotion] || 0) + 1;
+        });
+
+        const averageAge = totalAge / numFaces;
+        const maleDominantEmotion = getDominantEmotion(maleEmotionCount);
+        const femaleDominantEmotion = getDominantEmotion(femaleEmotionCount);
+        const generalDominantEmotion = getDominantEmotion(generalEmotionCount);
+
+        return {
+            numFaces,
+            numMale,
+            numFemale,
+            averageAge,
+            maleDominantEmotion,
+            femaleDominantEmotion,
+            generalDominantEmotion
+        };
+    }
+
+    function calculateRekognitionSummary(analysis) {
+        let numFaces = analysis.length;
+        let numMale = 0;
+        let numFemale = 0;
+        let totalAge = 0;
+        let maleEmotionCount = {};
+        let femaleEmotionCount = {};
+        let generalEmotionCount = {};
+
+        analysis.forEach(face => {
+            totalAge += (face.age_range.Low + face.age_range.High) / 2;
+            if (face.gender === "Male") {
+                numMale++;
+                Object.keys(face.emotions).forEach(emotion => {
+                    maleEmotionCount[emotion] = (maleEmotionCount[emotion] || 0) + face.emotions[emotion];
+                });
+            } else {
+                numFemale++;
+                Object.keys(face.emotions).forEach(emotion => {
+                    femaleEmotionCount[emotion] = (femaleEmotionCount[emotion] || 0) + face.emotions[emotion];
+                });
+            }
+            Object.keys(face.emotions).forEach(emotion => {
+                generalEmotionCount[emotion] = (generalEmotionCount[emotion] || 0) + face.emotions[emotion];
+            });
+        });
+
+        const averageAge = totalAge / numFaces;
+        const maleDominantEmotion = getDominantEmotion(maleEmotionCount);
+        const femaleDominantEmotion = getDominantEmotion(femaleEmotionCount);
+        const generalDominantEmotion = getDominantEmotion(generalEmotionCount);
+
+        return {
+            numFaces,
+            numMale,
+            numFemale,
+            averageAge,
+            maleDominantEmotion,
+            femaleDominantEmotion,
+            generalDominantEmotion
+        };
+    }
+
+    function getDominantEmotion(emotionCount) {
+        return Object.keys(emotionCount).reduce((a, b) => emotionCount[a] > emotionCount[b] ? a : b, '');
+    }
+
+    function displaySummary(summary) {
+        document.getElementById('summary-table').style.display = 'block';
+        document.getElementById('summary-row').innerHTML = `
+            <td>${summary.numFaces}</td>
+            <td>${summary.numMale}</td>
+            <td>${summary.numFemale}</td>
+            <td>${summary.averageAge.toFixed(2)}</td>
+            <td>${summary.maleDominantEmotion}</td>
+            <td>${summary.femaleDominantEmotion}</td>
+            <td>${summary.generalDominantEmotion}</td>
+        `;
+    }
+
+    function displayDeepFaceAnalysis(analysis) {
+        document.getElementById('analysis-table').style.display = 'block';
+        document.getElementById('analysis-header').innerHTML = `
+            <th>Age</th>
+            <th>Gender</th>
+            <th>Race</th>
+            <th>Emotion</th>
+        `;
+        analysis.forEach(face => {
+            document.getElementById('analysis-body').innerHTML += `
+                <tr>
+                    <td>${face.age}</td>
+                    <td>${face.dominant_gender}</td>
+                    <td>${face.dominant_race}</td>
+                    <td>${face.dominant_emotion}</td>
+                </tr>
+            `;
+        });
+    }
+
+    function displayRekognitionAnalysis(analysis) {
+        document.getElementById('analysis-table').style.display = 'block';
+        document.getElementById('analysis-header').innerHTML = `
+            <th>Age</th>
+            <th>Gender</th>
+            <th>Emotion</th>
+        `;
+        analysis.forEach(face => {
+            const avgAge = (face.age_range.Low + face.age_range.High) / 2;
+            const dominantEmotion = getDominantEmotion(face.emotions);
+            document.getElementById('analysis-body').innerHTML += `
+                <tr>
+                    <td>${avgAge.toFixed(2)}</td>
+                    <td>${face.gender}</td>
+                    <td>${dominantEmotion}</td>
+                </tr>
+            `;
+        });
+    }
+
+    function clearFields() {
+        document.getElementById('uploaded-image').style.display = 'none';
+        document.getElementById('uploaded-image').src = '#';
+        document.getElementById('results-content').innerText = '';
+        document.getElementById('summary-table').style.display = 'none';
+        document.getElementById('analysis-table').style.display = 'none';
+    }
+
+    document.addEventListener('DOMContentLoaded', toggleSettings);
+</script>
+{% endblock %}

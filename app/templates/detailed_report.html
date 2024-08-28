@@ -2,9 +2,163 @@
 
 {% block title %}Detailed Report{% endblock %}
 
-{% block header %}Detailed Report{% endblock %}
-
 {% block content %}
     <h2>Detailed Report</h2>
-    <!-- Aquí se incluirá el contenido del informe detallado -->
+
+    <!-- Botones de Exportación -->
+    <div class="d-flex justify-content-end mb-4">
+        <button class="btn btn-primary me-2" onclick="exportToPDF()">Export to PDF</button>
+        <button class="btn btn-success" onclick="exportToExcel()">Export to Excel</button>
+    </div>
+
+    <!-- Tabla de Resumen -->
+    <table class="table table-bordered mb-4">
+        <thead>
+            <tr>
+                <th>Date</th>
+                <th>Model</th>
+                <th>Total Analysis</th>
+                <th>Most Repeated Emotion</th>
+                <th>Most Repeated Gender</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for row in summary_data %}
+            <tr>
+                <td>{{ row.date }}</td>
+                <td>{{ row.model }}</td>
+                <td>{{ row.total_analysis }}</td>
+                <td>{{ row.most_repeated_emotion }}</td>
+                <td>{{ row.most_repeated_gender }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <!-- Gráficos -->
+    <div class="row">
+        <div class="col-md-6">
+            <canvas id="emotionChart"></canvas>
+        </div>
+        <div class="col-md-6">
+            <canvas id="groupedChart"></canvas>
+        </div>
+    </div>
+
+    <!-- Detalle de Análisis -->
+    <h3 class="mt-5">Analysis Details</h3>
+    <table class="table table-striped table-bordered mb-4">
+        <thead>
+            <tr>
+                <th>Date</th>
+                <th>Image</th>
+                <th>Model</th>
+                <th>Age</th>
+                <th>Gender</th>
+                <th>Emotion</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for detail in analysis_details %}
+            <tr>
+                <td>{{ detail.date }}</td>
+                <td>{{ detail.image }}</td>
+                <td>{{ detail.model }}</td>
+                <td>{{ detail.age }}</td>
+                <td>{{ detail.gender }}</td>
+                <td>{{ detail.emotion }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <!-- Gráfico de Detalles -->
+    <div class="mt-5">
+        <canvas id="detailChart"></canvas>
+    </div>
+
+    <!-- Scripts para Exportación y Gráficos -->
+    <script>
+        function exportToPDF() {
+            // Implementa la lógica para exportar el reporte a PDF
+        }
+
+        function exportToExcel() {
+            // Implementa la lógica para exportar el reporte a Excel
+        }
+
+        // Lógica para generar gráficos con Chart.js
+        var ctx1 = document.getElementById('emotionChart').getContext('2d');
+        var emotionChart = new Chart(ctx1, {
+            type: 'pie',
+            data: {
+                labels: {{ emotion_labels }},
+                datasets: [{
+                    label: 'Emotions',
+                    data: {{ emotion_data }},
+                    backgroundColor: [
+                        'rgba(255, 99, 132, 0.2)',
+                        'rgba(54, 162, 235, 0.2)',
+                        'rgba(255, 206, 86, 0.2)',
+                        'rgba(75, 192, 192, 0.2)',
+                        'rgba(153, 102, 255, 0.2)',
+                        'rgba(255, 159, 64, 0.2)'
+                    ],
+                    borderColor: [
+                        'rgba(255, 99, 132, 1)',
+                        'rgba(54, 162, 235, 1)',
+                        'rgba(255, 206, 86, 1)',
+                        'rgba(75, 192, 192, 1)',
+                        'rgba(153, 102, 255, 1)',
+                        'rgba(255, 159, 64, 1)'
+                    ],
+                    borderWidth: 1
+                }]
+            }
+        });
+
+        var ctx2 = document.getElementById('groupedChart').getContext('2d');
+        var groupedChart = new Chart(ctx2, {
+            type: 'bar',
+            data: {
+                labels: {{ grouped_labels }},
+                datasets: [{
+                    label: 'Age',
+                    data: {{ grouped_data_age }},
+                    backgroundColor: 'rgba(255, 99, 132, 0.2)',
+                    borderColor: 'rgba(255, 99, 132, 1)',
+                    borderWidth: 1
+                },
+                {
+                    label: 'Gender',
+                    data: {{ grouped_data_gender }},
+                    backgroundColor: 'rgba(54, 162, 235, 0.2)',
+                    borderColor: 'rgba(54, 162, 235, 1)',
+                    borderWidth: 1
+                },
+                {
+                    label: 'Emotion',
+                    data: {{ grouped_data_emotion }},
+                    backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                    borderColor: 'rgba(75, 192, 192, 1)',
+                    borderWidth: 1
+                }]
+            }
+        });
+
+        var ctx3 = document.getElementById('detailChart').getContext('2d');
+        var detailChart = new Chart(ctx3, {
+            type: 'line',
+            data: {
+                labels: {{ detail_labels }},
+                datasets: [{
+                    label: 'Emotion Trends',
+                    data: {{ detail_data }},
+                    backgroundColor: 'rgba(255, 206, 86, 0.2)',
+                    borderColor: 'rgba(255, 206, 86, 1)',
+                    borderWidth: 1
+                }]
+            }
+        });
+    </script>
 {% endblock %}

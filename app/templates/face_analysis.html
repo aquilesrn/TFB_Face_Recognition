@@ -58,6 +58,7 @@
         </div>
 
         <button type="button" class="btn btn-primary" onclick="analyzeImage()">Analyze Image</button>
+        <button type="button" class="btn btn-secondary" onclick="clearResults()">Clear</button> <!-- Botón Clear -->
 
         <div class="mt-5">
             <div class="row">
@@ -72,6 +73,24 @@
             </div>
         </div>
     </form>
+
+    <!-- New Table for Detailed Results -->
+    <div class="mt-5">
+        <h4>Detailed Analysis Results</h4>
+        <table id="detailed-results-table" class="table">
+            <thead>
+                <tr>
+                    <th>Image</th>
+                    <th>Age</th>
+                    <th>Dominant Emotion</th>
+                    <th>Dominant Gender</th>
+                    <th>Dominant Race</th>
+                </tr>
+            </thead>
+            <tbody>
+            </tbody>
+        </table>
+    </div>
 </div>
 
 <script>
@@ -127,12 +146,47 @@
                     const width = region.Width * img.width;
                     const height = region.Height * img.height;
                     ctx.strokeStyle = 'green';
-                    ctx.lineWidth = 2;
+                    ctx.lineWidth = 3;
                     ctx.strokeRect(x, y, width, height);
                 });
                 imgElement.src = canvas.toDataURL();
             };
         }
+
+        // Add data to the table
+        const tableBody = document.getElementById('detailed-results-table').getElementsByTagName('tbody')[0];
+        tableBody.innerHTML = '';  // Clear previous results
+
+        if (result.analysis) {
+            let analysis = result.analysis[0]; // Assume single face result for simplicity
+
+            let row = tableBody.insertRow();
+            row.insertCell(0).innerText = "Image1";
+            row.insertCell(1).innerText = analysis.age_range ? analysis.age_range.High : analysis.age;
+            row.insertCell(2).innerText = analysis.dominant_emotion || getDominantEmotion(analysis.emotions);
+            row.insertCell(3).innerText = analysis.gender || analysis.dominant_gender;
+            row.insertCell(4).innerText = analysis.dominant_race || "N/A";
+        }
+    }
+
+    function getDominantEmotion(emotions) {
+        let dominantEmotion = "";
+        let maxConfidence = 0;
+        for (const emotion in emotions) {
+            if (emotions[emotion] > maxConfidence) {
+                dominantEmotion = emotion.toLowerCase();
+                maxConfidence = emotions[emotion];
+            }
+        }
+        return dominantEmotion;
+    }
+
+    function clearResults() { // Función Clear
+        document.getElementById('uploaded-image').src = '#';
+        document.getElementById('uploaded-image').style.display = 'none';
+        document.getElementById('results-content').innerText = '';
+        const tableBody = document.getElementById('detailed-results-table').getElementsByTagName('tbody')[0];
+        tableBody.innerHTML = '';  // Clear table results
     }
 </script>
 {% endblock %}
